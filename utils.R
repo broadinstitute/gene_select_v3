@@ -305,6 +305,9 @@ select_genes <- function(gene_lst, tp_len, res_lst, pval_lim_raw) {
     pval_term <- "padj"
     pval_term_raw <- "pvalue"
 
+    gene_lst_len <- length(gene_lst)
+    total_count <- 0
+    last_print <- -1
     for (lgene in gene_lst) {
         for (j in 1:tp_len) {
             logFC_sign_j <- NA
@@ -393,6 +396,16 @@ select_genes <- function(gene_lst, tp_len, res_lst, pval_lim_raw) {
                 lgene_cond <- paste0(lgene, "__", treated_term)
                 gene_cond_lst[[lgene_cond]] <- pval_arr
                 gene_cond_raw_lst[[lgene_cond]] <- pval_raw_arr
+            }
+        }
+        total_count <- total_count + 1
+        total_comp <- (total_count / gene_lst_len) *100
+        total_comp_floor <- floor(total_comp)
+        if (total_comp_floor %% 5 == 0) {
+            if (total_comp_floor != last_print) {
+                out_str <- paste0("Gene selection complete: ", total_comp_floor, "%")
+                print_log(out_str)
+                last_print <- total_comp_floor
             }
         }
     }

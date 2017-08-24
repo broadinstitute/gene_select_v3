@@ -8,7 +8,7 @@ suppressMessages(library(docopt))
 
 'Gene selection script using two way factor analysis
 
-Usage: GeneSelectCombined_twoway.R --stag <stag> -c <counts> -o <outdir> [--l_cand <l2fc_cand> --base_lim <baseMean % limit>] 
+Usage: GeneSelect.R --stag <stag> -c <counts> -o <outdir> [--l_cand <l2fc_cand> --base_lim <baseMean % limit>] 
 
 options:
   -c <count> --count <count>
@@ -36,7 +36,7 @@ print(paste0("count_file: ", count_file))
 print(paste0("l_cand: ", l_cand))
 
 dir.create(outdir, recursive = TRUE)
-logfile <- paste0(outdir, "/", "logfile.txt")
+logfile <- paste0(outdir, "/", stag, "_logfile.txt")
 print(logfile)
 file.create(logfile)
 
@@ -58,6 +58,7 @@ str(countData)
 tp_parts <- sample_groups$exp_conds$tp_parts
 
 
+print("Running the DESeq2 tests.")
 res_lst <- list()
 basemean_lst <- list()
 gene_count <-  dim(countData)[1]
@@ -79,11 +80,13 @@ for (j in 1:tp_len) {
 }
 
 
+print("Starting gene selection procedure..")
 gene_lst <- rownames(countData)
 pval_lim_raw <- 0.05
 gene_res <- select_genes(gene_lst, tp_len, res_lst, pval_lim_raw)
 # Now process per gene.
 gene_cond_lst <- gene_res$"gene_cond_lst"
+gene_cond_raw_lst <- gene_res$"gene_cond_raw_lst"
 lmethod <- "fisher"
 sum_pvals_lst <- lapply(gene_cond_lst, get_meta_pval, lmethod)
 # adjusted p-value cutoff limit
@@ -91,20 +94,28 @@ sum_pvals_lst <- lapply(gene_cond_lst, get_meta_pval, lmethod)
 sum_pvals <- unlist(sum_pvals_lst)
 sum_pvals_s <- sort(sum_pvals)
 
+print_log("Starting Fisher's method")
 sorted_genes <- names(sum_pvals_s)
-final_lst <- list()
+final_df <- data.frame(matrix(ncol = 2, nrow = 0))
 selected_genes <- c()
 lcount <- 0
 for (lgene_cond in sorted_genes) {
     parts <- strsplit(lgene_cond, "__")
     lgene <- parts[[1]][1]
+    lcond <- parts[[1]][2]
     if (!(lgene %in% selected_genes)) {
         selected_genes <- c(selected_genes, lgene)
-        final_lst[[lgene]] = sum_pvals_s[lgene_cond]
+        final_df[lgene, 1] = sum_pvals_s[lgene_cond]
+        final_df[lgene, 2] = lcond
         lcount <- lcount + 1
     }
     
 }
+
+
+colnames(final_df) <- c("Fishers_pvalue", "treated_cond")
+genelst_file <- paste0(outdir, "/", stag, "_genelist.txt")
+write.table(final_df, genelst_file, sep = "\t", quote = FALSE)
 
 sorted_final_genes <- sort(selected_genes)
 
