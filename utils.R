@@ -424,3 +424,32 @@ get_meta_pval <- function(lpvals, method) {
    return (val$p)
 }
 
+
+get_sample_groups_TB <- function(sample_ids, sus, treated, untreated, timepoins) {
+
+    reg_str = "\\s*[,|;]\\s*"
+
+    sus_parts <- get_splitted_parts(sus, reg_str)
+    treated_parts <- get_splitted_parts(treated, reg_str)
+    untreated_parts <- get_splitted_parts(untreated, reg_str)
+    tp_parts <- get_splitted_parts(timepoints, reg_str)
+
+    # Create prefixes for differenet categories
+
+    retval <- list()
+
+    tp_len <- length(tp_parts)
+    for (j in 1:tp_len) {
+        treated_str <- paste0("sus_treated_time", j)
+        retval[[treated_str]] <- combine_parts(sample_ids, sus_parts, treated_parts, tp_parts[j])
+        untreated_str <- paste0("sus_untreated_time", j)
+        retval[[untreated_str]] <- combine_parts(sample_ids, sus_parts, untreated_parts, tp_parts[j])
+
+    }
+
+    exp_conds = list("treated_parts" = treated_parts, "untreated_parts" = untreated_parts,
+            "tp_parts" = tp_parts)
+    retval$"exp_conds" = exp_conds
+    return (retval)
+}
+
