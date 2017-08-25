@@ -1,6 +1,6 @@
 #!/usr/bin/env Rscript
 
-source("utils.R")
+source("/broad/IDP-Dx_work/nirmalya/research/gene_select_v3/utils.R")
 suppressMessages(library(DESeq2))
 suppressMessages(library(metap))
 suppressMessages(library(docopt))
