@@ -50,6 +50,11 @@ print(logfile)
 file.create(logfile)
 
 
+pval_logfile <- paste0(outdir, "/", stag, "_pval_logfile.txt")
+print(pval_logfile)
+file.create(pval_logfile)
+
+
 print(paste0("count_file: " , count_file))
 count_tbl <- get_count_tbl(count_file)
 print(paste0("count_tbl: ", dim(count_tbl)[2]))

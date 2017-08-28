@@ -316,6 +316,8 @@ select_genes <- function(gene_lst, tp_len, res_lst, pval_lim_raw) {
             lgene_cond <- paste0(lgene, "__", treated_term)
             pval_arr <- c()
             pval_raw_arr <- c()
+            basemean_arr <- c()
+            logFC_arr <- c()
             for (k in 1:tp_len) {
                 untreated_term <- paste0('sus_untreated_time', k)
                 name_term = paste0(treated_term, "__", untreated_term)
@@ -376,6 +378,8 @@ select_genes <- function(gene_lst, tp_len, res_lst, pval_lim_raw) {
                     success_j <- TRUE
                     pval_arr <- c(pval_arr, PValue_k)
                     pval_raw_arr <- c(pval_raw_arr, PValue_raw_k)
+                    basemean_arr <- c(basemean_arr, basemean_k)
+                    logFC_arr <- c(logFC_arr, logFC_k)
 
                 } else {
                     if (logFC_sign_j != logFC_sign_k) {
@@ -386,16 +390,36 @@ select_genes <- function(gene_lst, tp_len, res_lst, pval_lim_raw) {
                     } else {
                         pval_arr <- c(pval_arr, PValue_k)
                         pval_raw_arr <- c(pval_raw_arr, PValue_raw_k)
+                        basemean_arr <- c(basemean_arr, basemean_k)
+                        logFC_arr <- c(logFC_arr, logFC_k)
                     }
                 }
             }
             if (success_j) {
                 success_str <- paste0("count: ", count, " gene: ", lgene, " cond: ", treated_term)
                 print_logf(success_str)
-                count <- count + 1
                 lgene_cond <- paste0(lgene, "__", treated_term)
                 gene_cond_lst[[lgene_cond]] <- pval_arr
                 gene_cond_raw_lst[[lgene_cond]] <- pval_raw_arr
+
+                # Since a gene at a specific time point is selected, collected 
+                # most of the useful information
+
+                # 1. Adjusted p values
+                # 2. raw p-values
+                # 3. log fold change values
+                # 4. basemean values
+                pval_arr_str <- paste(pval_arr, collapse = ", ")
+                pval_raw_arr_str <- paste(pval_raw_arr, collapse = ", ")
+                logFC_arr_str <- paste(logFC_arr, collapse = ", ")
+                basemean_arr_str <- paste(basemean_arr, collapse = ", ")
+                full_str <- paste0("pvals: ", pval_arr_str, " pvals_raw: ", pval_raw_arr_str, " logFCs: ", logFC_arr_str, " basemeans: ", basemean_arr_str)
+                all_vals <- paste0("count: ", count, " gene: ", lgene, " cond: ", treated_term, " ", full_str)
+                #print(all_vals)
+                write(all_vals, file = pval_logfile, append = TRUE)
+
+                count <- count + 1
+                
             }
         }
         total_count <- total_count + 1
