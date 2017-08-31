@@ -8,7 +8,7 @@ suppressMessages(library(docopt))
 
 'Responsive Gene selection script for Mtb
 
-Usage: GeneSelect_Mtb.R --stag <stag> -c <counts> -o <outdir> -s <sus> -t <treated> -u <untreated> -n <timepoints> [--l_cand <l2fc_cand> --base_lim <baseMean % limit>] 
+Usage: GeneSelect_Mtb.R --stag <stag> -c <counts> -o <outdir> -s <sus> -t <treated> -u <untreated> -n <timepoints> [--l_cand <l2fc_cand> --base_lim <baseMean % limit> --no_t1] 
 
 options:
   -c <count> --count <count>
@@ -19,6 +19,7 @@ options:
   -u <untreated> --untreated <untreated>
   -n <timepoints> --timepoints <timepoints>
   --l_cand <l2fc_cand> [default: 1]
+  --no_t1  <No t1 gene select>
   --base_lim <baseMean % limit> [default: 50]' -> doc
 # what are the options? Note that stripped versions of the parameters are added to the returned list
 
@@ -31,7 +32,7 @@ sus <- opts$sus
 treated <- opts$treated
 untreated <- opts$untreated
 timepoints <- opts$timepoints
-
+no_t1 <- opts$no_t1
 
 # p_cand is hard coded since we are not using the adjusted p_value cutoff
 p_cand <- 0.05
@@ -43,6 +44,7 @@ base_lim <- as.numeric(opts$base_lim)
 
 print(paste0("count_file: ", count_file))
 print(paste0("l_cand: ", l_cand))
+print(paste("no_t1: ", no_t1))
 
 dir.create(outdir, recursive = TRUE)
 logfile <- paste0(outdir, "/", stag, "_logfile.txt")
@@ -75,13 +77,19 @@ print("countData")
 str(countData)
 tp_parts <- sample_groups$exp_conds$tp_parts
 
+treated_start <- NA
+if (no_t1) {
+    treated_start <- 2
+} else {
+    treated_start <- 1
+}
 
 print("Running the DESeq2 tests.")
 res_lst <- list()
 basemean_lst <- list()
 gene_count <-  dim(countData)[1]
 tp_len <- length(tp_parts)
-for (j in 1:tp_len) {
+for (j in treated_start:tp_len) {
     for (k in 1:tp_len) {
         treated_term <- paste0('sus_treated_time', j)
         untreated_term <- paste0('sus_untreated_time', k) 
@@ -101,7 +109,7 @@ for (j in 1:tp_len) {
 print("Starting gene selection procedure..")
 gene_lst <- rownames(countData)
 pval_lim_raw <- 0.05
-gene_res <- select_genes(gene_lst, tp_len, res_lst, pval_lim_raw)
+gene_res <- select_genes(gene_lst, tp_len, res_lst, pval_lim_raw, treated_start)
 # Now process per gene.
 gene_cond_lst <- gene_res$"gene_cond_lst"
 gene_cond_raw_lst <- gene_res$"gene_cond_raw_lst"

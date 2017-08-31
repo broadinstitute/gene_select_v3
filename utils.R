@@ -297,7 +297,7 @@ get_lst <- function(lst, end_str) {
     return(ret_lst)
 }
 
-select_genes <- function(gene_lst, tp_len, res_lst, pval_lim_raw) {
+select_genes <- function(gene_lst, tp_len, res_lst, pval_lim_raw, treated_start) {
 
     count <- 1
     gene_cond_lst <- list()
@@ -309,7 +309,7 @@ select_genes <- function(gene_lst, tp_len, res_lst, pval_lim_raw) {
     total_count <- 0
     last_print <- -1
     for (lgene in gene_lst) {
-        for (j in 1:tp_len) {
+        for (j in treated_start:tp_len) {
             logFC_sign_j <- NA
             success_j <- FALSE
             treated_term <- paste0('sus_treated_time', j)
