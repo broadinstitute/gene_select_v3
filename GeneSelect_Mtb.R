@@ -19,7 +19,6 @@ options:
   -u <untreated> --untreated <untreated>
   -n <timepoints> --timepoints <timepoints>
   --l_cand <l2fc_cand> [default: 1]
-  --no_t1  <No t1 gene select>
   --base_lim <baseMean % limit> [default: 50]' -> doc
 # what are the options? Note that stripped versions of the parameters are added to the returned list
 
@@ -109,7 +108,7 @@ for (j in treated_start:tp_len) {
 print("Starting gene selection procedure..")
 gene_lst <- rownames(countData)
 pval_lim_raw <- 0.05
-gene_res <- select_genes_full(gene_lst, tp_len, res_lst, basemean_lst, pval_lim_raw, treated_start, use_res = FALSE)
+gene_res <- select_genes(gene_lst, tp_len, res_lst, basemean_lst, pval_lim_raw, treated_start, use_res = FALSE)
 # Now process per gene.
 gene_cond_lst <- gene_res$"gene_cond_lst"
 gene_cond_raw_lst <- gene_res$"gene_cond_raw_lst"

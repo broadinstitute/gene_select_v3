@@ -406,10 +406,23 @@ combine_arrs <- function(lst1, lst2, lst3, select_str, use_first) {
 
 get_full_str <- function(ret_lst, type_str) {
 
-    pvals_tag <- paste0("pvals_", type_str)
-    pvals_raw_tag <- paste0("pvals_raw_", type_str)
-    logFCs_tag <- paste0("logFCs_", type_str)
-    basemeans_tag <- paste0("basemeans_", type_str)
+    pvals_tag <- NA
+    pvals_raw_tag <- NA
+    logFCs_tag <- NA
+    basemeans_tag <- NA
+
+    if (type_str == "")
+    {
+        pvals_tag <- "pvals"
+        pvals_raw_tag <- "pvals_raw"
+        logFCs_tag <- "logFCs"
+        basemeans_tag <- "basemeans"
+    } else {
+        pvals_tag <- paste0("pvals_", type_str)
+        pvals_raw_tag <- paste0("pvals_raw_", type_str)
+        logFCs_tag <- paste0("logFCs_", type_str)
+        basemeans_tag <- paste0("basemeans_", type_str)
+    }
 
     pval_arr <- ret_lst$"pval_arr"
     pval_raw_arr <- ret_lst$"pval_raw_arr"
@@ -426,7 +439,7 @@ get_full_str <- function(ret_lst, type_str) {
 }
 
 
-select_genes_full <- function(gene_lst, tp_len, res_lst, basemean_lst, pval_lim_raw, treated_start, use_res) {
+select_genes <- function(gene_lst, tp_len, res_lst, basemean_lst, pval_lim_raw, treated_start, use_res) {
 
     count <- 1
     gene_cond_lst <- list()
@@ -490,10 +503,12 @@ select_genes_full <- function(gene_lst, tp_len, res_lst, basemean_lst, pval_lim_
                 # 2. raw p-values
                 # 3. log fold change values
                 # 4. basemean values
-                full_str_su <- get_full_str(ret_j_su, "su")
+                all_vals <- NA
                 if (!use_res) {
+                    full_str_su <- get_full_str(ret_j_su, "")
                     all_vals <- paste0("count: ", count, " gene: ", lgene, " cond: ", treated_term, " ", full_str_su)
                 } else {
+                    full_str_su <- get_full_str(ret_j_su, "su")
                     full_str_rt <- get_full_str(ret_j_rt, "rt")
                     full_str_ru <- get_full_str(ret_j_ru, "ru")
 

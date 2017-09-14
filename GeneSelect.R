@@ -1,6 +1,6 @@
 #!/usr/bin/env Rscript
 
-source("/broad/IDP-Dx_work/nirmalya/research/gene_select_v3_alpha/utils.R")
+source("/broad/IDP-Dx_work/nirmalya/research/gene_select_v3/utils.R")
 suppressMessages(library(DESeq2))
 suppressMessages(library(metap))
 suppressMessages(library(docopt))
@@ -15,8 +15,6 @@ options:
   -o <outdir> --outdir <outdir>
   --stag <stag>
   --l_cand <l2fc_cand> [default: 1]
-  --use_t1  <use t1 for susceptible treated>
-  --use_res <use resistant strains>
   --base_lim <baseMean % limit> [default: 50]' -> doc
 # what are the options? Note that stripped versions of the parameters are added to the returned list
 
@@ -26,7 +24,7 @@ str(opts)
 count_file <- opts$count
 outdir <- opts$outdir
 use_t1 <- opts$use_t1
-use_res <- options$use_res
+use_res <- opts$use_res
 
 
 # p_cand is hard coded since we are not using the adjusted p_value cutoff
@@ -94,6 +92,7 @@ for (j in treated_start:tp_len) {
         basemean_lst[[name_term]] <- lres$baseMean_lim_val
     }    
     if (use_res) {
+
         for (k in 1:tp_len) {
             treated_term <- paste0('sus_treated_time', j)
             untreated_term <- paste0('res_treated_time', k) 
@@ -107,6 +106,7 @@ for (j in treated_start:tp_len) {
             res_lst[[name_term]] <- data.frame(lres$lres)
             basemean_lst[[name_term]] <- lres$baseMean_lim_val
         }
+
         for (k in 1:tp_len) {
             treated_term <- paste0('sus_treated_time', j)
             untreated_term <- paste0('res_untreated_time', k) 
@@ -127,7 +127,7 @@ for (j in treated_start:tp_len) {
 print("Starting gene selection procedure..")
 gene_lst <- rownames(countData)
 pval_lim_raw <- 0.05
-gene_res <- select_genes_full(gene_lst, tp_len, res_lst, basemean_lst, pval_lim_raw, treated_start, use_res)
+gene_res <- select_genes(gene_lst, tp_len, res_lst, basemean_lst, pval_lim_raw, treated_start, use_res)
 # Now process per gene.
 gene_cond_lst <- gene_res$"gene_cond_lst"
 gene_cond_raw_lst <- gene_res$"gene_cond_raw_lst"
