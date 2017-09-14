@@ -1,6 +1,6 @@
 #!/usr/bin/env Rscript
 
-source("/broad/IDP-Dx_work/nirmalya/research/gene_select_v3/utils.R")
+source("/broad/IDP-Dx_work/nirmalya/research/gene_select_v3_alpha/utils.R")
 suppressMessages(library(DESeq2))
 suppressMessages(library(metap))
 suppressMessages(library(docopt))
@@ -8,14 +8,15 @@ suppressMessages(library(docopt))
 
 'Gene selection script using two way factor analysis
 
-Usage: GeneSelect.R --stag <stag> -c <counts> -o <outdir> [--l_cand <l2fc_cand> --base_lim <baseMean % limit> --no_t1] 
+Usage: GeneSelect.R --stag <stag> -c <counts> -o <outdir> [--l_cand <l2fc_cand> --base_lim <baseMean % limit> --use_res --use_t1] 
 
 options:
   -c <count> --count <count>
   -o <outdir> --outdir <outdir>
   --stag <stag>
   --l_cand <l2fc_cand> [default: 1]
-  --no_t1  <No t1 gene select>
+  --use_t1  <use t1 for susceptible treated>
+  --use_res <use resistant strains>
   --base_lim <baseMean % limit> [default: 50]' -> doc
 # what are the options? Note that stripped versions of the parameters are added to the returned list
 
@@ -24,7 +25,8 @@ str(opts)
 
 count_file <- opts$count
 outdir <- opts$outdir
-no_t1 <- opts$no_t1
+use_t1 <- opts$use_t1
+use_res <- options$use_res
 
 
 # p_cand is hard coded since we are not using the adjusted p_value cutoff
@@ -37,7 +39,8 @@ base_lim <- as.numeric(opts$base_lim)
 
 print(paste0("count_file: ", count_file))
 print(paste0("l_cand: ", l_cand))
-print(paste("no_t1: ", no_t1))
+print(paste("use_t1: ", use_t1))
+print(paste("use_res: ", use_res))
 
 dir.create(outdir, recursive = TRUE)
 logfile <- paste0(outdir, "/", stag, "_logfile.txt")
@@ -65,10 +68,10 @@ str(countData)
 tp_parts <- sample_groups$exp_conds$tp_parts
 
 treated_start <- NA
-if (no_t1) {
-    treated_start <- 2
-} else {
+if (use_t1) {
     treated_start <- 1
+} else {
+    treated_start <- 2
 }
 
 print("Running the DESeq2 tests.")
@@ -89,6 +92,34 @@ for (j in treated_start:tp_len) {
         name_term = paste0(treated_term, "__", untreated_term)
         res_lst[[name_term]] <- data.frame(lres$lres)
         basemean_lst[[name_term]] <- lres$baseMean_lim_val
+    }    
+    if (use_res) {
+        for (k in 1:tp_len) {
+            treated_term <- paste0('sus_treated_time', j)
+            untreated_term <- paste0('res_treated_time', k) 
+            print(treated_term)
+            print(untreated_term)
+            print("---------")
+            lres <- deseq_condwise_part(countData, sample_groups, treated_term, 
+                untreated_term, lfcth = l_cand, padjth = p_cand, 
+                altH = "greaterAbs", use_beta_prior = FALSE, base_lim = 50) 
+            name_term = paste0(treated_term, "__", untreated_term)
+            res_lst[[name_term]] <- data.frame(lres$lres)
+            basemean_lst[[name_term]] <- lres$baseMean_lim_val
+        }
+        for (k in 1:tp_len) {
+            treated_term <- paste0('sus_treated_time', j)
+            untreated_term <- paste0('res_untreated_time', k) 
+            print(treated_term)
+            print(untreated_term)
+            print("---------")
+            lres <- deseq_condwise_part(countData, sample_groups, treated_term, 
+                untreated_term, lfcth = l_cand, padjth = p_cand, 
+                altH = "greaterAbs", use_beta_prior = FALSE, base_lim = 50) 
+            name_term = paste0(treated_term, "__", untreated_term)
+            res_lst[[name_term]] <- data.frame(lres$lres)
+            basemean_lst[[name_term]] <- lres$baseMean_lim_val
+        }
     }
 }
 
@@ -96,7 +127,7 @@ for (j in treated_start:tp_len) {
 print("Starting gene selection procedure..")
 gene_lst <- rownames(countData)
 pval_lim_raw <- 0.05
-gene_res <- select_genes(gene_lst, tp_len, res_lst, pval_lim_raw, treated_start)
+gene_res <- select_genes_full(gene_lst, tp_len, res_lst, basemean_lst, pval_lim_raw, treated_start, use_res)
 # Now process per gene.
 gene_cond_lst <- gene_res$"gene_cond_lst"
 gene_cond_raw_lst <- gene_res$"gene_cond_raw_lst"

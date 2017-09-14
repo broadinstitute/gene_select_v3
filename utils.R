@@ -288,7 +288,6 @@ print_data_ma_between_tps <- function(out_tbl, outdir, stag, exp_conds, cond, ti
 }
 
 
-
 get_lst <- function(lst, end_str) {
     lnames <- names(lst)
     reg_str <- paste0(end_str, "$")
@@ -297,109 +296,191 @@ get_lst <- function(lst, end_str) {
     return(ret_lst)
 }
 
-select_genes <- function(gene_lst, tp_len, res_lst, pval_lim_raw, treated_start) {
+check_for_drop <- function(lgene, res_lst, basemean_lst, treated_term, untreated_tag, tp_len) {
+  
+    pval_term <- "padj"
+    pval_term_raw <- "pvalue"
+    logFC_sign_j <- NA
+    success_j <- FALSE
+    lgene_cond <- paste0(lgene, "__", treated_term)
+    pval_arr <- c()
+    pval_raw_arr <- c()
+    basemean_arr <- c()
+    logFC_arr <- c()
+
+    for (k in 1:tp_len) {
+        untreated_term <- paste0(untreated_tag, k)
+        name_term = paste0(treated_term, "__", untreated_term)
+        ldata <- res_lst[[name_term]]
+        basemean_lim_val <- basemean_lst[[name_term]]
+        basemean_k <- ldata[lgene, "baseMean"]
+        PValue_k <- ldata[lgene, pval_term]
+        PValue_raw_k <- ldata[lgene, pval_term_raw]
+        logFC_k <- ldata[lgene, "log2FoldChange"]
+
+        drop_tag <- paste0("lgene: ", lgene, " treated: ", treated_term, " untreated: ", untreated_term)
+        if (is.na(logFC_k)) {
+            success_j <- FALSE
+            err_str <- paste0("Dropped: NA val of logFC, ", drop_tag)
+            print_logf(err_str)
+            break
+        }
+
+        if (is.na(PValue_k)) {
+            success_j <- FALSE
+            err_str <- paste0("Dropped: NA val of adjusted PValue, ", drop_tag)
+            print_logf(err_str)
+            break
+        }
+        
+        if (is.na(basemean_k)) {
+            success_j <- FALSE
+            err_str <- paste0("Dropped: NA val of basemean, ", drop_tag)
+            print_logf(err_str)
+            break
+        }
+
+        if (is.na(PValue_raw_k)) {
+            success_j <- FALSE
+            err_str <- paste0("Dropped: NA val of unadjusted p value, ", drop_tag)
+            print_logf(err_str)
+            break
+        }
+         
+        if (basemean_k < basemean_lim_val) {
+            success_j <- FALSE
+            err_str <- paste0("Dropped: basemean ", basemean_k, " < basemean_lim_val: ", basemean_lim_val, " , ", drop_tag)
+            print_logf(err_str)
+            break
+        }
+
+        if (PValue_raw_k > pval_lim_raw) {
+            err_str <- paste0("Dropped: raw p-value ", PValue_raw_k, " >  raw p-value limit ", pval_lim_raw, " , ", drop_tag)
+            print_logf(err_str)
+            success_j <- FALSE
+            break
+        }
+
+        logFC_sign_k <- get_sign(logFC_k)
+
+        if (k == 1) {
+            logFC_sign_j <- logFC_sign_k
+            success_j <- TRUE
+            pval_arr <- c(pval_arr, PValue_k)
+            pval_raw_arr <- c(pval_raw_arr, PValue_raw_k)
+            basemean_arr <- c(basemean_arr, basemean_k)
+            logFC_arr <- c(logFC_arr, logFC_k)
+
+        } else {
+            if (logFC_sign_j != logFC_sign_k) {
+                errstr <- paste0("Dropped: change of sign og logFC from ", logFC_sign_j, " to ", logFC_sign_k, " , ", drop_tag)
+                print_logf(errstr)
+                success_j <- FALSE
+                break
+            } else {
+                pval_arr <- c(pval_arr, PValue_k)
+                pval_raw_arr <- c(pval_raw_arr, PValue_raw_k)
+                basemean_arr <- c(basemean_arr, basemean_k)
+                logFC_arr <- c(logFC_arr, logFC_k)
+            }
+        }
+    }
+
+    ret_lst <- list("success_j" = success_j, "pval_arr" = pval_arr, "pval_raw_arr" = pval_raw_arr, "basemean_arr" = basemean_arr, "logFC_arr" = logFC_arr)
+    return (ret_lst)
+
+}
+
+
+combine_arrs <- function(lst1, lst2, lst3, select_str, use_first) {
+    arr1 <- lst1[[select_str]]
+    if (use_first) {
+        return (arr1)
+    } else {
+        arr2 <- lst2[[select_str]]
+        arr3 <- lst3[[select_str]]
+        arr_combined <- c(arr1, arr2, arr3)
+        return (arr_combined)
+    }
+}
+
+get_full_str <- function(ret_lst, type_str) {
+
+    pvals_tag <- paste0("pvals_", type_str)
+    pvals_raw_tag <- paste0("pvals_raw_", type_str)
+    logFCs_tag <- paste0("logFCs_", type_str)
+    basemeans_tag <- paste0("basemeans_", type_str)
+
+    pval_arr <- ret_lst$"pval_arr"
+    pval_raw_arr <- ret_lst$"pval_raw_arr"
+    basemean_arr <- ret_lst$"basemean_arr"
+    logFC_arr <- ret_lst$"logFC_arr"
+
+    pval_arr_str <- paste(pval_arr, collapse = ", ")
+    pval_raw_arr_str <- paste(pval_raw_arr, collapse = ", ")
+    logFC_arr_str <- paste(logFC_arr, collapse = ", ")
+    basemean_arr_str <- paste(basemean_arr, collapse = ", ")
+
+    full_str <- paste0(pvals_tag, ": ", pval_arr_str, " ", pvals_raw_tag, ": ", pval_raw_arr_str, " ", logFCs_tag, ": ", logFC_arr_str, " ", basemeans_tag, ": ", basemean_arr_str)
+    
+}
+
+
+select_genes_full <- function(gene_lst, tp_len, res_lst, basemean_lst, pval_lim_raw, treated_start, use_res) {
 
     count <- 1
     gene_cond_lst <- list()
     gene_cond_raw_lst <- list()
-    pval_term <- "padj"
-    pval_term_raw <- "pvalue"
 
     gene_lst_len <- length(gene_lst)
     total_count <- 0
     last_print <- -1
     for (lgene in gene_lst) {
         for (j in treated_start:tp_len) {
-            logFC_sign_j <- NA
-            success_j <- FALSE
+            
             treated_term <- paste0('sus_treated_time', j)
-            lgene_cond <- paste0(lgene, "__", treated_term)
-            pval_arr <- c()
-            pval_raw_arr <- c()
-            basemean_arr <- c()
-            logFC_arr <- c()
-            for (k in 1:tp_len) {
-                untreated_term <- paste0('sus_untreated_time', k)
-                name_term = paste0(treated_term, "__", untreated_term)
-                ldata <- res_lst[[name_term]]
-                basemean_lim_val <- basemean_lst[[name_term]]
-                basemean_k <- ldata[lgene, "baseMean"]
-                PValue_k <- ldata[lgene, pval_term]
-                PValue_raw_k <- ldata[lgene, pval_term_raw]
-                logFC_k <- ldata[lgene, "log2FoldChange"]
 
-                drop_tag <- paste0("lgene: ", lgene, " treated: ", treated_term, " untreated: ", untreated_term)
-                if (is.na(logFC_k)) {
-                    success_j <- FALSE
-                    err_str <- paste0("Dropped: NA val of logFC, ", drop_tag)
-                    print_logf(err_str)
-                    break
-                }
+            untreated_tag <- "sus_untreated_time"
+            ret_j_su <- check_for_drop(lgene, res_lst, basemean_lst, treated_term, untreated_tag, tp_len)
+            success_j_su <- ret_j_su$"success_j"
 
-                if (is.na(PValue_k)) {
-                    success_j <- FALSE
-                    err_str <- paste0("Dropped: NA val of adjusted PValue, ", drop_tag)
-                    print_logf(err_str)
-                    break
-                }
-                
-                if (is.na(basemean_k)) {
-                    success_j <- FALSE
-                    err_str <- paste0("Dropped: NA val of basemean, ", drop_tag)
-                    print_logf(err_str)
-                    break
-                }
-
-                if (is.na(PValue_raw_k)) {
-                    success_j <- FALSE
-                    err_str <- paste0("Dropped: NA val of unadjusted p value, ", drop_tag)
-                    print_logf(err_str)
-                    break
-                }
-                 
-                if (basemean_k < basemean_lim_val) {
-                    success_j <- FALSE
-                    err_str <- paste0("Dropped: basemean ", basemean_k, " < basemean_lim_val: ", basemean_lim_val, " , ", drop_tag)
-                    print_logf(err_str)
-                    break
-                }
-
-                if (PValue_raw_k > pval_lim_raw) {
-                    err_str <- paste0("Dropped: raw p-value ", PValue_raw_k, " >  raw p-value limit ", pval_lim_raw, " , ", drop_tag)
-                    print_logf(err_str)
-                    success_j <- FALSE
-                    break
-                }
-
-                logFC_sign_k <- get_sign(logFC_k)
-
-                if (k == 1) {
-                    logFC_sign_j <- logFC_sign_k
-                    success_j <- TRUE
-                    pval_arr <- c(pval_arr, PValue_k)
-                    pval_raw_arr <- c(pval_raw_arr, PValue_raw_k)
-                    basemean_arr <- c(basemean_arr, basemean_k)
-                    logFC_arr <- c(logFC_arr, logFC_k)
-
-                } else {
-                    if (logFC_sign_j != logFC_sign_k) {
-                        errstr <- paste0("Dropped: change of sign og logFC from ", logFC_sign_j, " to ", logFC_sign_k, " , ", drop_tag)
-                        print_logf(errstr)
-                        success_j <- FALSE
-                        break
-                    } else {
-                        pval_arr <- c(pval_arr, PValue_k)
-                        pval_raw_arr <- c(pval_raw_arr, PValue_raw_k)
-                        basemean_arr <- c(basemean_arr, basemean_k)
-                        logFC_arr <- c(logFC_arr, logFC_k)
-                    }
-                }
+            ret_j_rt <- NA
+            ret_j_ru <- NA
+            success_j_rt <- NA
+            success_j_ru <- NA 
+            if (use_res) {
+                untreated_tag <- "res_treated_time"
+                ret_j_rt <- check_for_drop(lgene, res_lst, basemean_lst, treated_term, untreated_tag, tp_len)
+                untreated_tag <- "res_untreated_time"
+                ret_j_ru <- check_for_drop(lgene, res_lst, basemean_lst, treated_term, untreated_tag, tp_len)
+                success_j_rt <- ret_j_rt$"success_j"
+                success_j_ru <- ret_j_ru$"success_j"
             }
-            if (success_j) {
+
+            success_j_com <- NA
+            if (use_res) {
+                success_j_com <- success_j_su && success_j_rt && success_j_ru
+            } else {
+                success_j_com <- success_j_su
+            }
+
+            if (success_j_com) {
+                
                 success_str <- paste0("count: ", count, " gene: ", lgene, " cond: ", treated_term)
                 print_logf(success_str)
                 lgene_cond <- paste0(lgene, "__", treated_term)
+
+                use_first <- NA
+                if (use_res) {
+                    use_first <- FALSE
+                } else {
+                    use_first <- TRUE
+                }
+
+                pval_arr <- combine_arrs(ret_j_su, ret_j_rt, ret_j_ru, "pval_arr", use_first)
                 gene_cond_lst[[lgene_cond]] <- pval_arr
+                
+                pval_raw_arr <- combine_arrs(ret_j_su, ret_j_rt, ret_j_ru, "pval_raw_arr", use_first)
                 gene_cond_raw_lst[[lgene_cond]] <- pval_raw_arr
 
                 # Since a gene at a specific time point is selected, collected 
@@ -409,19 +490,22 @@ select_genes <- function(gene_lst, tp_len, res_lst, pval_lim_raw, treated_start)
                 # 2. raw p-values
                 # 3. log fold change values
                 # 4. basemean values
-                pval_arr_str <- paste(pval_arr, collapse = ", ")
-                pval_raw_arr_str <- paste(pval_raw_arr, collapse = ", ")
-                logFC_arr_str <- paste(logFC_arr, collapse = ", ")
-                basemean_arr_str <- paste(basemean_arr, collapse = ", ")
-                full_str <- paste0("pvals: ", pval_arr_str, " pvals_raw: ", pval_raw_arr_str, " logFCs: ", logFC_arr_str, " basemeans: ", basemean_arr_str)
-                all_vals <- paste0("count: ", count, " gene: ", lgene, " cond: ", treated_term, " ", full_str)
-                #print(all_vals)
+                full_str_su <- get_full_str(ret_j_su, "su")
+                if (!use_res) {
+                    all_vals <- paste0("count: ", count, " gene: ", lgene, " cond: ", treated_term, " ", full_str_su)
+                } else {
+                    full_str_rt <- get_full_str(ret_j_rt, "rt")
+                    full_str_ru <- get_full_str(ret_j_ru, "ru")
+
+                    all_vals <- paste0("count: ", count, " gene: ", lgene, " cond: ", treated_term, " ", full_str_su, " ", full_str_rt, " ", full_str_ru)
+                }
                 write(all_vals, file = pval_logfile, append = TRUE)
 
                 count <- count + 1
                 
             }
         }
+
         total_count <- total_count + 1
         total_comp <- (total_count / gene_lst_len) *100
         total_comp_floor <- floor(total_comp)
