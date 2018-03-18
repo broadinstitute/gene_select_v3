@@ -33,7 +33,7 @@ l_cand <- as.numeric(opts$l_cand)
 
 stag <- opts$stag
 
-base_lim <- as.numeric(opts$base_lim)
+base_lim_val <- as.numeric(opts$base_lim)
 
 print(paste0("count_file: ", count_file))
 print(paste0("l_cand: ", l_cand))
@@ -86,7 +86,7 @@ for (j in treated_start:tp_len) {
         print("---------")
         lres <- deseq_condwise_part(countData, sample_groups, treated_term, 
             untreated_term, lfcth = l_cand, padjth = p_cand, 
-            altH = "greaterAbs", use_beta_prior = FALSE, base_lim = 50) 
+            altH = "greaterAbs", use_beta_prior = FALSE, base_lim = base_lim_val) 
         name_term = paste0(treated_term, "__", untreated_term)
         res_lst[[name_term]] <- data.frame(lres$lres)
         basemean_lst[[name_term]] <- lres$baseMean_lim_val
@@ -101,7 +101,7 @@ for (j in treated_start:tp_len) {
             print("---------")
             lres <- deseq_condwise_part(countData, sample_groups, treated_term, 
                 untreated_term, lfcth = l_cand, padjth = p_cand, 
-                altH = "greaterAbs", use_beta_prior = FALSE, base_lim = 50) 
+                altH = "greaterAbs", use_beta_prior = FALSE, base_lim = base_lim_val) 
             name_term = paste0(treated_term, "__", untreated_term)
             res_lst[[name_term]] <- data.frame(lres$lres)
             basemean_lst[[name_term]] <- lres$baseMean_lim_val
@@ -115,7 +115,7 @@ for (j in treated_start:tp_len) {
             print("---------")
             lres <- deseq_condwise_part(countData, sample_groups, treated_term, 
                 untreated_term, lfcth = l_cand, padjth = p_cand, 
-                altH = "greaterAbs", use_beta_prior = FALSE, base_lim = 50) 
+                altH = "greaterAbs", use_beta_prior = FALSE, base_lim = base_lim_val) 
             name_term = paste0(treated_term, "__", untreated_term)
             res_lst[[name_term]] <- data.frame(lres$lres)
             basemean_lst[[name_term]] <- lres$baseMean_lim_val
