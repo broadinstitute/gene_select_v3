@@ -29,6 +29,7 @@ use_res <- opts$use_res
 
 # p_cand is hard coded since we are not using the adjusted p_value cutoff
 p_cand <- 0.05
+
 l_cand <- as.numeric(opts$l_cand)
 
 stag <- opts$stag
@@ -39,8 +40,15 @@ print(paste0("count_file: ", count_file))
 print(paste0("l_cand: ", l_cand))
 print(paste("use_t1: ", use_t1))
 print(paste("use_res: ", use_res))
+print(paste("base_lim: ", base_lim_val))
+print(paste("stag: ", stag))
 
 dir.create(outdir, recursive = TRUE)
+ma_dir <- paste0(outdir, "/MA_plots")
+dir.create(ma_dir)
+tbls_dir <- paste0(outdir, "/DESeq_tbls")
+dir.create(tbls_dir)
+
 logfile <- paste0(outdir, "/", stag, "_logfile.txt")
 print(logfile)
 file.create(logfile)
@@ -83,6 +91,8 @@ for (j in treated_start:tp_len) {
         untreated_term <- paste0('sus_untreated_time', k) 
         print(treated_term)
         print(untreated_term)
+        contrast_val <- get_contrast_str(sample_groups, treated_term, untreated_term)
+        print(contrast_val)
         print("---------")
         lres <- deseq_condwise_part(countData, sample_groups, treated_term, 
             untreated_term, lfcth = l_cand, padjth = p_cand, 
@@ -90,7 +100,11 @@ for (j in treated_start:tp_len) {
         name_term = paste0(treated_term, "__", untreated_term)
         res_lst[[name_term]] <- data.frame(lres$lres)
         basemean_lst[[name_term]] <- lres$baseMean_lim_val
+
+        print_map_tbls(lres, stag, contrast_val, outdir)
+
     }    
+
     if (use_res) {
 
         for (k in 1:tp_len) {

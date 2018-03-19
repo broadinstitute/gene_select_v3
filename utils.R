@@ -108,6 +108,39 @@ get_sample_groups <- function(sample_ids) {
     return (retval)
 }
 
+print_map_tbls <- function(lres, stag, contrast_val, outdir){
+
+    prefix <- paste0("stag: ", stag, "\ncontrast: ", contrast_val)
+    outfile_MA <- paste0(outdir, "/MA_plots/", contrast_val, "_MA.pdf")
+    pdf(outfile_MA)
+    plotMA(lres$"lres", main=prefix, ylim=c(-5,5))
+    dev.off()
+
+    outfile_tbl <- paste0(outdir, "/DESeq_tbls/", contrast_val, "_tbl.tsv")
+    write.table(as.data.frame(lres$"lres"), outfile_tbl, sep = "\t")
+
+}
+
+
+collapse_samples <- function(lcond_samples) {
+    parts <- strsplit(lcond_samples, "_")
+    lcond_len <- length(parts[[1]])
+    lcond_len_2 <- lcond_len -1
+    retval <- paste(parts[[1]][1:lcond_len_2], collapse = "_")
+    return (retval)
+}
+
+get_contrast_str <- function(sample_groups, cond2, cond1) {
+
+    print("from get_contrast_str")
+    lcond2_samples <- sample_groups[[cond2]]
+    lcond2_str <- collapse_samples(lcond2_samples)
+    lcond1_samples <- sample_groups[[cond1]]
+    lcond1_str <- collapse_samples(lcond1_samples)
+    lstr <- paste0(lcond2_str, "_VS_", lcond1_str)
+    return (lstr)
+}
+
 
 get_colData_small <- function(sample_groups, cond2, cond1) {
     lcond2_samples <- sample_groups[[cond2]]
@@ -161,24 +194,6 @@ get_colData <- function(sample_groups, hasRes = TRUE) {
     return (colData)
 }
 
-get_colData_mixed <- function(sample_groups, hasRes = TRUE) {
-
-    sus_untreated_vals <- get_repeated_vals("sus_untreated_time", sample_groups)
-    condition <- c(sus_untreated_vals[["condition"]])
-    all_samples <- c(sus_untreated_vals[["samples"]])
-
-    if (hasRes) {
-        res_untreated_vals <- get_repeated_vals("res_untreated_time", sample_groups)
-        condition <- c(condition, res_untreated_vals[["condition"]])
-        all_samples <- c(all_samples, res_untreated_vals[["samples"]])
-    }
-
-    colData <- data.frame(condition)
-    colnames(colData) <- "condition"
-    rownames(colData) <- all_samples
-    return (colData)
-}
-
 get_count_tbl <- function(count_file) {
     count_tbl1 <- read.csv(count_file, sep = "\t", header = TRUE, stringsAsFactors = FALSE, row.names = 1, check.names = FALSE)
     genes <- rownames(count_tbl1)
@@ -190,7 +205,7 @@ get_count_tbl <- function(count_file) {
 get_baseMean_lim <- function(lres, base_lim) {
     lres_sorted <- lres[order(-lres$baseMean), ]
     rowlen <- dim(lres)[1]
-    rowlen_lim <- floor(rowlen*(100-base_lim)/100)
+    rowlen_lim <- floor(rowlen*(100.0 - base_lim)/100.0)
     
     if (rowlen_lim > rowlen) {
         rowlen_lim = rowlen
@@ -250,41 +265,6 @@ deseq_condwise_part <- function(countData, sample_groups, cond2, cond1, lfcth, p
     dds <- DESeq(dds, betaPrior = use_beta_prior)
     retval <- deseq_condwise(dds, cond2, cond1, lfcth, padjth, altH, base_lim)
     return (retval)
-}
-
-print_data_ma_between_conds <- function(out_tbl, outdir, stag, exp_conds, timepos, beta_prior_str, data_usage_str) {
-    prefix <- paste(stag, exp_conds$"treated_parts"[1], '_VS_', exp_conds$"untreated_parts"[1], exp_conds$"tp_parts"[timepos], beta_prior_str, data_usage_str, sep = "_")
-    print_log(paste0("prefix_str: ", prefix))
-    outfile <- paste0(outdir, "/", prefix, ".txt")
-    write.table(as.data.frame(out_tbl$"lres_top"), outfile, sep = "\t")
-    prefix <- paste(stag, exp_conds$"treated_parts"[1], '_VS_', exp_conds$"untreated_parts"[1], exp_conds$"tp_parts"[timepos], beta_prior_str, data_usage_str, "allgenes", sep = "_")
-    outfile <- paste0(outdir, "/", prefix, ".txt")
-    write.table(as.data.frame(out_tbl$"lres"), outfile, sep = "\t")
-    outfile_MA <- paste0(outdir, "/", prefix, "_MA.pdf")
-    pdf(outfile_MA)
-    plotMA(out_tbl$"lres", main=prefix, ylim=c(-5,5))
-    dev.off()
-
-}
-
-print_data_ma_between_tps <- function(out_tbl, outdir, stag, exp_conds, cond, timepos2, timepos1, beta_prior_str, data_usage_str) {
-    cond_str <- NULL
-    if (cond == "treated") {
-        cond_str <- exp_conds$"treated_parts"[1]
-    } else if (cond == "untreated") {
-        cond_str <- exp_conds$"untreated_parts"[1]
-    }
-    prefix <- paste(stag, cond_str, exp_conds$"tp_parts"[timepos2], "_VS_", exp_conds$"tp_parts"[timepos1], beta_prior_str, data_usage_str, sep = "_")
-    print_log(paste0("prefix_str: ", prefix))
-    outfile <- paste0(outdir, "/", prefix, ".txt")
-    write.table(as.data.frame(out_tbl$"lres_top"), outfile, sep = "\t")
-    prefix <- paste(stag, cond_str, exp_conds$"tp_parts"[timepos2], "_VS_", exp_conds$"tp_parts"[timepos1], beta_prior_str, data_usage_str, "allgenes", sep = "_")
-    outfile <- paste0(outdir, "/", prefix, ".txt")
-    write.table(as.data.frame(out_tbl$"lres"), outfile, sep = "\t")
-    outfile_MA <- paste0(outdir, "/", prefix, "_MA.pdf")
-    pdf(outfile_MA)
-    plotMA(out_tbl$"lres", main=prefix, ylim=c(-5,5))
-    dev.off()
 }
 
 
