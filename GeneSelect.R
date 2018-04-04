@@ -112,6 +112,8 @@ for (j in treated_start:tp_len) {
             untreated_term <- paste0('res_treated_time', k) 
             print(treated_term)
             print(untreated_term)
+            contrast_val <- get_contrast_str(sample_groups, treated_term, untreated_term)
+            print(contrast_val)
             print("---------")
             lres <- deseq_condwise_part(countData, sample_groups, treated_term, 
                 untreated_term, lfcth = l_cand, padjth = p_cand, 
@@ -119,6 +121,7 @@ for (j in treated_start:tp_len) {
             name_term = paste0(treated_term, "__", untreated_term)
             res_lst[[name_term]] <- data.frame(lres$lres)
             basemean_lst[[name_term]] <- lres$baseMean_lim_val
+            print_map_tbls(lres, stag, contrast_val, outdir)
         }
 
         for (k in 1:tp_len) {
@@ -126,6 +129,8 @@ for (j in treated_start:tp_len) {
             untreated_term <- paste0('res_untreated_time', k) 
             print(treated_term)
             print(untreated_term)
+            contrast_val <- get_contrast_str(sample_groups, treated_term, untreated_term)
+            print(contrast_val)
             print("---------")
             lres <- deseq_condwise_part(countData, sample_groups, treated_term, 
                 untreated_term, lfcth = l_cand, padjth = p_cand, 
@@ -133,6 +138,7 @@ for (j in treated_start:tp_len) {
             name_term = paste0(treated_term, "__", untreated_term)
             res_lst[[name_term]] <- data.frame(lres$lres)
             basemean_lst[[name_term]] <- lres$baseMean_lim_val
+            print_map_tbls(lres, stag, contrast_val, outdir)
         }
     }
 }
