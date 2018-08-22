@@ -172,7 +172,7 @@ colnames(final_df) <- c("Fishers_pvalue", "treated_cond")
 genelst_file <- paste0(outdir, "/", stag, "_genelist.txt")
 write.table(final_df, genelst_file, sep = "\t", quote = FALSE)
 
-reg_tab_file <- paste0(outdir, "/", stag, "_gene_regulation.txt")
+reg_tab_file <- paste0(outdir, "/", stag, "_genes_homology.txt")
 write.table(sign_df, reg_tab_file, sep = "\t", quote = FALSE, col.names = FALSE)
 sorted_final_genes <- sort(selected_genes)
 
