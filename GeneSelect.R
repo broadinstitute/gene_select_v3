@@ -176,11 +176,43 @@ for (lgene_cond in sorted_genes) {
     
 }
 
+sign_df <- data.frame(matrix(ncol = 1, nrow = 0))
+
+for (lgene_cond in sorted_genes) {
+    # Get the treated cond
+    parts <- strsplit(lgene_cond, "__")
+    lgene <- parts[[1]][1]
+    lcond <- parts[[1]][2]
+
+    # Replace the treated trem in the lcond with untreated
+
+    lcond_un <- sub('treated', 'untreated', lcond)
+    combined_cond <- paste0(lcond, "__", lcond_un)
+
+    lcomp <- res_lst[[combined_cond]]
+    l2fc_val <- lcomp[lgene, "log2FoldChange"]
+
+    l2fc_sign <- "."
+
+    if (is.na(l2fc_val)) {
+        l2fc_sign <- "NA"
+    } else if (l2fc_val >=0) {
+        l2fc_sign <- "+"
+    } else if(l2fc_val){
+        l2fc_sign <- "-"
+    }
+
+    locus_tag <- sub("^CDS:(\\S+?):.*$", "\\1", lgene)
+    sign_df[locus_tag, 1] <- l2fc_sign
+
+}
 
 colnames(final_df) <- c("Fishers_pvalue", "treated_cond")
 genelst_file <- paste0(outdir, "/", stag, "_genelist.txt")
 write.table(final_df, genelst_file, sep = "\t", quote = FALSE)
 
+reg_tab_file <- paste0(outdir, "/", stag, "_gene_regulation.txt")
+write.table(sign_df, reg_tab_file, sep = "\t", quote = FALSE, col.names = FALSE)
 sorted_final_genes <- sort(selected_genes)
 
 print(selected_genes)
