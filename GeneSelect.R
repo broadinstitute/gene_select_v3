@@ -178,11 +178,11 @@ for (lgene_cond in sorted_genes) {
 
 sign_df <- data.frame(matrix(ncol = 1, nrow = 0))
 
+lregex <- '(\\S+)__(\\S+)$'
 for (lgene_cond in sorted_genes) {
-    # Get the treated cond
-    parts <- strsplit(lgene_cond, "__")
-    lgene <- parts[[1]][1]
-    lcond <- parts[[1]][2]
+    
+    lgene <- sub(lregex, "\\1", lgene_cond)
+    lcond <- sub(lregex, "\\2", lgene_cond)
 
     # Replace the treated trem in the lcond with untreated
 

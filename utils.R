@@ -517,7 +517,10 @@ select_genes <- function(gene_lst, tp_len, res_lst, basemean_lst, pval_lim_raw, 
     return (ret_lst)
 }
 
+
 get_meta_pval <- function(lpvals, method) { 
+   min_val <- .Machine$double.xmin
+   lpvals[lpvals == 0] <- min_val
    val <- NA 
    if (method == "fisher") { 
        val <- sumlog(lpvals) 

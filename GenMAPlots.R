@@ -8,7 +8,7 @@ suppressMessages(library(docopt))
 
 'Gene selection script using two way factor analysis
 
-Usage: GeneSelect.R --stag <stag> -c <counts> -o <outdir> [--l_cand <l2fc_cand> --base_lim <baseMean % limit>] 
+Usage: GeneSelect.R --stag <stag> -c <counts> -o <outdir> [--l_cand <l2fc_cand> --base_lim <baseMean % limit> --no_res] 
 
 options:
   -c <count> --count <count>
@@ -23,6 +23,7 @@ str(opts)
 
 count_file <- opts$count
 outdir <- opts$outdir
+no_res <- opts$no_res
 
 
 # p_cand is hard coded since we are not using the adjusted p_value cutoff
@@ -38,6 +39,7 @@ print(paste0("count_file: ", count_file))
 print(paste0("l_cand: ", l_cand))
 print(paste("base_lim: ", base_lim_val))
 print(paste("stag: ", stag))
+print(paste0("no_res", no_res))
 
 dir.create(outdir, recursive = TRUE)
 ma_dir <- paste0(outdir, "/MA_plots")
@@ -96,23 +98,26 @@ for (k in 1:tp_len) {
 
 }    
 
-for (k in 1:tp_len) {
-    treated_term <- paste0('res_treated_time', k)
-    untreated_term <- paste0('res_untreated_time', k) 
-    print(treated_term)
-    print(untreated_term)
-    contrast_val <- get_contrast_str(sample_groups, treated_term, untreated_term)
-    print(contrast_val)
-    print("---------")
-    lres <- deseq_condwise_part(countData, sample_groups, treated_term, 
-        untreated_term, lfcth = l_cand, padjth = p_cand, 
-        altH = "greaterAbs", use_beta_prior = FALSE, base_lim = base_lim_val) 
-    name_term = paste0(treated_term, "__", untreated_term)
-    res_lst[[name_term]] <- data.frame(lres$lres)
-    basemean_lst[[name_term]] <- lres$baseMean_lim_val
+has_res <- !no_res
+if (has_res) {
+    for (k in 1:tp_len) {
+        treated_term <- paste0('res_treated_time', k)
+        untreated_term <- paste0('res_untreated_time', k) 
+        print(treated_term)
+        print(untreated_term)
+        contrast_val <- get_contrast_str(sample_groups, treated_term, untreated_term)
+        print(contrast_val)
+        print("---------")
+        lres <- deseq_condwise_part(countData, sample_groups, treated_term, 
+            untreated_term, lfcth = l_cand, padjth = p_cand, 
+            altH = "greaterAbs", use_beta_prior = FALSE, base_lim = base_lim_val) 
+        name_term = paste0(treated_term, "__", untreated_term)
+        res_lst[[name_term]] <- data.frame(lres$lres)
+        basemean_lst[[name_term]] <- lres$baseMean_lim_val
 
-    print_map_tbls(lres, stag, contrast_val, outdir)
+        print_map_tbls(lres, stag, contrast_val, outdir)
 
+    }
 }
 
         
